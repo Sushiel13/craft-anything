@@ -1,0 +1,239 @@
+# Craft an app or website with Craft Anything, on GitHub Actions.
+#
+# Two ways to start a build:
+#   1. Actions tab → "Craft an app or website" → Run workflow (or from a terminal:
+#        gh workflow run craft-app.yml -f request="A todo app in React" -f target=-)
+#   2. Open an issue titled "Craft: <what you want>". Put "target: <url>" on its own line in the
+#      body to recreate an existing site; anything else in the body is added to the request.
+#      Only the repository owner's issues start a build.
+#
+# Each build:
+#   - uploads the whole project folder as a run artifact,
+#   - pushes the generated app to its own branch, craft/<run number>-<name>,
+#   - comments the result on the issue, when started from one.
+#
+# Needs one repository secret (Settings → Secrets and variables → Actions):
+#   ANTHROPIC_API_KEY        an Anthropic API key, or
+#   CLAUDE_CODE_OAUTH_TOKEN  a token from `claude setup-token` (Claude Pro/Max sign-in)
+
+name: Craft an app or website
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: What to make, in your words (e.g. "A landing page for a coffee shop in plain HTML")
+        required: true
+        type: string
+      target:
+        description: A website address to recreate, or "-" for none
+        required: false
+        default: "-"
+        type: string
+      build_with:
+        description: Optional stack or engine (e.g. "rust", "React + Vite"); empty picks from the request
+        required: false
+        default: ""
+        type: string
+      rounds:
+        description: Refinement rounds after the first build
+        required: false
+        default: "1"
+        type: choice
+        options: ["0", "1", "2", "3"]
+      deep:
+        description: Deep mode (reads the target's code too; private use only)
+        required: false
+        default: false
+        type: boolean
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: craft-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  craft:
+    # Manual runs always; issues only when the owner opens one titled "Craft: …".
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.issue.title, 'Craft:') && github.event.issue.user.login == github.repository_owner)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - name: Set paths
+        run: |
+          echo "CRAFT_ANYTHING_CONFIG_DIR=$RUNNER_TEMP/craft-config" >> "$GITHUB_ENV"
+          echo "PROJECTS_DIR=$RUNNER_TEMP/craft-projects" >> "$GITHUB_ENV"
+
+      - name: Read the request
+        id: req
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_REQUEST: ${{ inputs.request }}
+          IN_TARGET: ${{ inputs.target }}
+          IN_BUILD_WITH: ${{ inputs.build_with }}
+          IN_ROUNDS: ${{ inputs.rounds }}
+          IN_DEEP: ${{ inputs.deep }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "issues" ]; then
+            request="${ISSUE_TITLE#Craft:}"
+            target="$(printf '%s\n' "$ISSUE_BODY" | sed -n 's/^[[:space:]]*target:[[:space:]]*//Ip' | head -n1 | tr -d '\r')"
+            extra="$(printf '%s\n' "$ISSUE_BODY" | grep -viE '^[[:space:]]*target:' | tr -d '\r' || true)"
+            [ -n "${extra//[[:space:]]/}" ] && request="$request. $extra"
+            build_with=""; rounds="1"; deep="false"
+          else
+            request="$IN_REQUEST"; target="$IN_TARGET"; build_with="$IN_BUILD_WITH"
+            rounds="$IN_ROUNDS"; deep="$IN_DEEP"
+          fi
+          request="$(printf '%s' "$request" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          [ -z "$target" ] && target="-"
+          if [ -z "$request" ]; then echo "::error::The request is empty."; exit 1; fi
+          if [ -z "${ANTHROPIC_API_KEY}${CLAUDE_CODE_OAUTH_TOKEN}" ]; then
+            echo "::error::Add an ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN repository secret."; exit 1
+          fi
+          slug="$(printf '%s' "$request" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//' | cut -c1-40 | sed 's/-$//')"
+          {
+            echo "branch=craft/${GITHUB_RUN_NUMBER}-${slug:-app}"
+            echo "target=$target"; echo "build_with=$build_with"
+            echo "rounds=$rounds"; echo "deep=$deep"
+            echo "request<<CRAFT_EOF"; echo "$request"; echo "CRAFT_EOF"
+          } >> "$GITHUB_OUTPUT"
+          { echo "### Request"; echo "$request"; echo; echo "Target: \`$target\`"; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Say the build started
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" -R "$GITHUB_REPOSITORY" \
+            --body "Building now. Progress: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      - name: Install Craft Anything CLI (latest release)
+        id: release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cli" && cd "$RUNNER_TEMP/cli"
+          gh release download -R storytold/craft-anything --pattern '*-linux-x86_64.tar.gz'
+          tar -xzf ./*.tar.gz
+          bin="$(find . -type f -name craft-anything-cli | head -n1)"
+          test -n "$bin"
+          install -Dm755 "$bin" "$HOME/.local/bin/craft-anything-cli"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Falls back to building this repository's own CLI when no release could be used.
+      - name: Set up Rust
+        if: steps.release.outcome != 'success'
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        if: steps.release.outcome != 'success'
+      - name: Build Craft Anything CLI from source
+        if: steps.release.outcome != 'success'
+        run: |
+          cargo install --locked --path apps/craft-anything-cli --root "$HOME/.local"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check the install
+        run: |
+          craft-anything-cli --version
+          craft-anything-cli doctor || true
+
+      - name: Build it
+        id: build
+        env:
+          REQUEST: ${{ steps.req.outputs.request }}
+          TARGET: ${{ steps.req.outputs.target }}
+          BUILD_WITH: ${{ steps.req.outputs.build_with }}
+          ROUNDS: ${{ steps.req.outputs.rounds }}
+          DEEP: ${{ steps.req.outputs.deep }}
+        run: |
+          set -uo pipefail
+          mkdir -p "$PROJECTS_DIR" "$CRAFT_ANYTHING_CONFIG_DIR"
+          args=(rebuild "$TARGET" "$REQUEST" --unattended --rounds "$ROUNDS" --projects-dir "$PROJECTS_DIR")
+          [ -n "$BUILD_WITH" ] && args+=(--build-with "$BUILD_WITH")
+          [ "$DEEP" = "true" ] && args=(--deep "${args[@]}")
+          craft-anything-cli "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/craft.log"
+          status=${PIPESTATUS[0]}
+          project="$(find "$PROJECTS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          [ -n "$project" ] && cp "$RUNNER_TEMP/craft.log" "$project/craft.log"
+          exit 0
+
+      - name: Upload the project
+        if: steps.build.outputs.project != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: craft-project-${{ github.run_number }}
+          path: ${{ steps.build.outputs.project }}
+          include-hidden-files: true
+          if-no-files-found: warn
+
+      - name: Push the app to its own branch
+        id: push
+        if: steps.build.outputs.project != ''
+        env:
+          PROJECT: ${{ steps.build.outputs.project }}
+          BRANCH: ${{ steps.req.outputs.branch }}
+          REQUEST: ${{ steps.req.outputs.request }}
+        run: |
+          set -euo pipefail
+          src="$PROJECT/app"
+          [ -d "$src" ] || src="$PROJECT"
+          out="$RUNNER_TEMP/publish"
+          rm -rf "$out" && mkdir -p "$out"
+          rsync -a --exclude '.git' --exclude 'node_modules' --exclude 'target' --exclude 'dist' --exclude 'build' "$src"/ "$out"/
+          [ -f "$PROJECT/craft.json" ] && cp "$PROJECT/craft.json" "$out/craft.json"
+          cd "$out"
+          git init -q -b "$BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Craft: $REQUEST"
+          git push -q "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
+          echo "url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "Code: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${BRANCH}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report on the issue
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.build.outputs.status }}
+          CODE_URL: ${{ steps.push.outputs.url }}
+        run: |
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [ "$STATUS" = "0" ]; then head="Done."; else head="The build didn't finish cleanly (exit ${STATUS:-unknown}); whatever was made is still saved."; fi
+          body="$head"$'\n\n'"- Run and downloadable project: $run_url"
+          [ -n "$CODE_URL" ] && body="$body"$'\n'"- Code: $CODE_URL"
+          gh issue comment "${{ github.event.issue.number }}" -R "$GITHUB_REPOSITORY" --body "$body"
+
+      - name: Fail if the build failed
+        if: steps.build.outputs.status != '0'
+        run: |
+          echo "::error::craft-anything-cli exited with ${{ steps.build.outputs.status }}; see the log above."
+          exit 1
