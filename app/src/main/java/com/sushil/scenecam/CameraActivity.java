@@ -159,6 +159,7 @@ public class CameraActivity extends Activity {
 
         String id = getIntent().getStringExtra(EXTRA_PRESET);
         if (id == null) id = prefs.getString("scene", "auto");
+        preset = Preset.byId(id);
         want4k = prefs.getBoolean("want4k", true);
 
         texture = findViewById(R.id.texture);
@@ -442,6 +443,7 @@ public class CameraActivity extends Activity {
     }
 
     private void updateProStrip() {
+        if (preset == null || proValue[4] == null) return;
         long[] plan = recording && recordingExposure != null ? recordingExposure : plannedExposure(videoMode);
         String isoV = plan != null ? String.valueOf(plan[1]) : liveIso > 0 ? String.valueOf(liveIso) : "—";
         String spdV = plan != null ? Fmt.shutter(plan[0]) : liveExp > 0 ? Fmt.shutter(liveExp) : "—";
