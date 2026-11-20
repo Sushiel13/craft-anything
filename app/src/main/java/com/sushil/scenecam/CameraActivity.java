@@ -7,6 +7,13 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.view.Gravity;
+import android.widget.HorizontalScrollView;
+import android.widget.SeekBar;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
@@ -62,15 +69,23 @@ import java.util.Locale;
 public class CameraActivity extends Activity {
 
     public static final String EXTRA_PRESET = "preset";
+    private static final int ACCENT = 0xFFFFB547;
     private static final int REQ_PERMS = 7;
 
     // ---- views
     private AutoFitTextureView texture;
     private GridOverlay grid;
-    private TextView title, readout, tip, evText, modePhoto, modeVideo, quality, countdown, recTime, flip;
-    private View shutter;
-    private ImageView thumb;
-    private LinearLayout zoomRow;
+    private TextView title, tipBanner, modePhoto, modeVideo, countdown, recTime, timerBtn;
+    private View shutter, flash, flip, evPanel, modeSeg;
+    private ImageView thumb, gridBtn;
+    private LinearLayout zoomRow, proStrip, carousel;
+    private HorizontalScrollView carouselScroll;
+    private SeekBar evSeek;
+    private final TextView[] proLabel = new TextView[5];
+    private final TextView[] proValue = new TextView[5];
+    private SharedPreferences prefs;
+    private int timerSec;
+    private static final int REQ_SCENE = 8;
 
     // ---- state chosen by the user / preset
     private Preset preset;
@@ -140,59 +155,85 @@ public class CameraActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+        prefs = getSharedPreferences("scenecam", MODE_PRIVATE);
 
-        preset = Preset.byId(getIntent().getStringExtra(EXTRA_PRESET));
-        videoMode = preset.startInVideo || !preset.photo;
-        useFront = preset.frontCamera;
-        ev = preset.ev;
-        zoom = preset.zoom;
+        String id = getIntent().getStringExtra(EXTRA_PRESET);
+        if (id == null) id = prefs.getString("scene", "auto");
+        want4k = prefs.getBoolean("want4k", true);
 
         texture = findViewById(R.id.texture);
         grid = findViewById(R.id.grid);
+        flash = findViewById(R.id.flash);
         title = findViewById(R.id.title);
-        readout = findViewById(R.id.readout);
-        tip = findViewById(R.id.tip);
-        evText = findViewById(R.id.evText);
+        tipBanner = findViewById(R.id.tipBanner);
         modePhoto = findViewById(R.id.modePhoto);
         modeVideo = findViewById(R.id.modeVideo);
-        quality = findViewById(R.id.quality);
+        modeSeg = findViewById(R.id.modeSeg);
         countdown = findViewById(R.id.countdown);
         recTime = findViewById(R.id.recTime);
+        timerBtn = findViewById(R.id.timerBtn);
         shutter = findViewById(R.id.shutter);
         thumb = findViewById(R.id.thumb);
         zoomRow = findViewById(R.id.zoomRow);
+        proStrip = findViewById(R.id.proStrip);
+        carousel = findViewById(R.id.carousel);
+        carouselScroll = findViewById(R.id.carouselScroll);
         flip = findViewById(R.id.flip);
+        gridBtn = findViewById(R.id.gridBtn);
+        evPanel = findViewById(R.id.evPanel);
+        evSeek = findViewById(R.id.evSeek);
 
-        title.setText(preset.emoji + "  " + preset.name);
-        tip.setText("💡 " + preset.tips);
+        thumb.setClipToOutline(true);
+        evSeek.setProgressTintList(ColorStateList.valueOf(ACCENT));
+        evSeek.setThumbTintList(ColorStateList.valueOf(ACCENT));
 
-        findViewById(R.id.back).setOnClickListener(v -> finish());
-        findViewById(R.id.info).setOnClickListener(v -> showInfo());
-        findViewById(R.id.gridBtn).setOnClickListener(v -> {
+        findViewById(R.id.scenesBtn).setOnClickListener(v -> openScenes());
+        findViewById(R.id.titleBox).setOnClickListener(v -> showInfo());
+        gridBtn.setOnClickListener(v -> {
             grid.setGrid(!grid.isGrid());
-            ((TextView) v).setTextColor(grid.isGrid() ? 0xFFFFB547 : 0xFFFFFFFF);
+            prefs.edit().putBoolean("grid", grid.isGrid()).apply();
+            updateGridIcon();
         });
-        findViewById(R.id.evMinus).setOnClickListener(v -> changeEv(-1));
-        findViewById(R.id.evPlus).setOnClickListener(v -> changeEv(+1));
+        grid.setGrid(prefs.getBoolean("grid", true));
+        updateGridIcon();
+        timerBtn.setOnClickListener(v -> {
+            timerSec = timerSec == 0 ? 3 : timerSec == 3 ? 10 : 0;
+            updateTimerButton();
+        });
 
-        modePhoto.setVisibility(preset.photo ? View.VISIBLE : View.GONE);
-        modeVideo.setVisibility(preset.video ? View.VISIBLE : View.GONE);
         modePhoto.setOnClickListener(v -> switchMode(false));
         modeVideo.setOnClickListener(v -> switchMode(true));
-        quality.setOnClickListener(v -> {
-            if (recording) return;
-            want4k = !want4k;
-            reopen();
-        });
         flip.setOnClickListener(v -> {
             if (recording || capturing) return;
             useFront = !useFront;
             focusPoint = null;
             zoom = useFront ? 1f : preset.zoom;
+            flip.animate().rotationBy(180f).setDuration(300).start();
             reopen();
         });
-        shutter.setOnClickListener(v -> onShutter());
+        shutter.setOnClickListener(v -> {
+            v.animate().scaleX(0.88f).scaleY(0.88f).setDuration(80)
+                    .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()).start();
+            onShutter();
+        });
         thumb.setOnClickListener(v -> openLast());
+
+        evSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                if (!fromUser) return;
+                ev = Math.round((progress + evRange.getLower()) * evStep * 10f) / 10f;
+                updateProStrip();
+                updateRepeating();
+            }
+            @Override public void onStartTrackingTouch(SeekBar sb) { }
+            @Override public void onStopTrackingTouch(SeekBar sb) { }
+        });
+        findViewById(R.id.evReset).setOnClickListener(v -> {
+            ev = preset.ev;
+            syncEvSeek();
+            updateProStrip();
+            updateRepeating();
+        });
 
         texture.setOnTouchListener((v, e) -> {
             if (e.getAction() == MotionEvent.ACTION_UP) {
@@ -209,13 +250,219 @@ public class CameraActivity extends Activity {
         };
 
         cm = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        updateEvText();
-        updateModeLabels();
+        buildProStrip();
+        buildCarousel();
+        setPreset(Preset.byId(id), true);
 
         if (!hasPerm(Manifest.permission.CAMERA)) {
             requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQ_PERMS);
         } else if (!hasPerm(Manifest.permission.RECORD_AUDIO)) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_PERMS);
+        }
+    }
+
+    // =====================================================================
+    // Scenes
+    // =====================================================================
+
+    /** Applies a scene: its mode, camera, brightness, zoom and timer. */
+    private void setPreset(Preset p, boolean first) {
+        if (recording || capturing) return;
+        boolean oldVideo = videoMode, oldFront = useFront;
+        preset = p;
+        prefs.edit().putString("scene", p.id).apply();
+        if (!p.photo) videoMode = true;
+        else if (!p.video) videoMode = false;
+        else if (first || p.startInVideo) videoMode = p.startInVideo;
+        useFront = p.frontCamera;
+        ev = p.ev;
+        zoom = p.zoom;
+        timerSec = p.timerSec;
+        focusPoint = null;
+
+        title.setText(p.emoji + "  " + p.name);
+        modePhoto.setVisibility(p.photo ? View.VISIBLE : View.GONE);
+        modeVideo.setVisibility(p.video ? View.VISIBLE : View.GONE);
+        updateTimerButton();
+        updateModeLabels();
+        highlightCarousel(!first);
+        showTip("💡 " + p.tips);
+
+        if (first) return;
+        if (oldVideo != videoMode || oldFront != useFront || device == null) {
+            reopen();
+        } else {
+            zoom = clampZoom(zoom);
+            buildZoomButtons();
+            syncEvSeek();
+            updateRepeating();
+            updateProStrip();
+        }
+    }
+
+    private void openScenes() {
+        if (recording) return;
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra(MainActivity.EXTRA_CURRENT, preset.id);
+        startActivityForResult(i, REQ_SCENE);
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_SCENE && resultCode == RESULT_OK && data != null) {
+            String id = data.getStringExtra(EXTRA_PRESET);
+            if (id != null) setPreset(Preset.byId(id), false);
+        }
+    }
+
+    private void buildCarousel() {
+        carousel.removeAllViews();
+        int side = getResources().getDisplayMetrics().widthPixels / 2;
+        carousel.setPadding(side - dp(40), 0, side - dp(40), 0);
+        for (Preset p : Preset.all()) {
+            TextView t = new TextView(this);
+            t.setText(p.shortName);
+            t.setTextSize(13);
+            t.setLetterSpacing(0.08f);
+            t.setTypeface(Typeface.DEFAULT_BOLD);
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(dp(12), 0, dp(12), 0);
+            t.setTag(p.id);
+            t.setOnClickListener(v -> {
+                if (!p.id.equals(preset.id)) setPreset(p, false);
+            });
+            carousel.addView(t, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT));
+        }
+    }
+
+    private void highlightCarousel(boolean animate) {
+        View sel = null;
+        for (int i = 0; i < carousel.getChildCount(); i++) {
+            TextView t = (TextView) carousel.getChildAt(i);
+            boolean on = preset.id.equals(t.getTag());
+            t.setTextColor(on ? ACCENT : 0xB3FFFFFF);
+            if (on) sel = t;
+        }
+        final View target = sel;
+        if (target == null) return;
+        carouselScroll.post(() -> {
+            int x = target.getLeft() + target.getWidth() / 2 - carouselScroll.getWidth() / 2;
+            if (animate) carouselScroll.smoothScrollTo(x, 0); else carouselScroll.scrollTo(x, 0);
+        });
+    }
+
+    private void showTip(String text) {
+        tipBanner.setText(text);
+        tipBanner.setVisibility(View.VISIBLE);
+        tipBanner.setAlpha(0f);
+        tipBanner.animate().alpha(1f).setDuration(200).start();
+        ui.removeCallbacks(hideTip);
+        ui.postDelayed(hideTip, 5000);
+    }
+
+    private final Runnable hideTip = () ->
+            tipBanner.animate().alpha(0f).setDuration(300)
+                    .withEndAction(() -> tipBanner.setVisibility(View.GONE)).start();
+
+    private void updateGridIcon() {
+        gridBtn.setColorFilter(grid.isGrid() ? ACCENT : 0xFFFFFFFF);
+    }
+
+    private void updateTimerButton() {
+        Drawable d = getDrawable(R.drawable.ic_timer);
+        if (d != null) {
+            d = d.mutate();
+            d.setTint(timerSec > 0 ? ACCENT : 0xFFFFFFFF);
+            d.setBounds(0, 0, dp(22), dp(22));
+        }
+        timerBtn.setCompoundDrawables(d, null, null, null);
+        timerBtn.setText(timerSec > 0 ? timerSec + "s" : "");
+    }
+
+    // =====================================================================
+    // Pro strip: ISO · SPEED · EV · WB · FOCUS  (video: RES · FPS · ISO · SPEED · EV)
+    // =====================================================================
+
+    private void buildProStrip() {
+        proStrip.removeAllViews();
+        for (int i = 0; i < 5; i++) {
+            LinearLayout cell = new LinearLayout(this);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER);
+            cell.setPadding(0, dp(5), 0, dp(5));
+            TextView label = new TextView(this);
+            label.setTextSize(9.5f);
+            label.setLetterSpacing(0.1f);
+            label.setTextColor(0x99FFFFFF);
+            label.setGravity(Gravity.CENTER);
+            TextView value = new TextView(this);
+            value.setTextSize(14);
+            value.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            value.setTextColor(0xFFFFFFFF);
+            value.setGravity(Gravity.CENTER);
+            value.setMaxLines(1);
+            cell.addView(label);
+            cell.addView(value);
+            final int idx = i;
+            cell.setOnClickListener(v -> onProCell(idx));
+            proLabel[i] = label;
+            proValue[i] = value;
+            proStrip.addView(cell, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        updateProStrip();
+    }
+
+    private void onProCell(int idx) {
+        String label = proLabel[idx].getText().toString();
+        if (label.startsWith("EV")) {
+            boolean open = evPanel.getVisibility() != View.VISIBLE;
+            evPanel.setVisibility(open ? View.VISIBLE : View.GONE);
+            if (open) syncEvSeek();
+        } else if (label.startsWith("RES") && !recording) {
+            want4k = !want4k;
+            prefs.edit().putBoolean("want4k", want4k).apply();
+            reopen();
+        } else {
+            showInfo();
+        }
+    }
+
+    private void syncEvSeek() {
+        evSeek.setMax(Math.max(0, evRange.getUpper() - evRange.getLower()));
+        evSeek.setProgress(evIndex() - evRange.getLower());
+    }
+
+    private void setCell(int i, String label, String value, boolean sceneSet) {
+        proLabel[i].setText(label);
+        proValue[i].setText(value);
+        proValue[i].setTextColor(sceneSet ? ACCENT : 0xFFFFFFFF);
+    }
+
+    private void updateProStrip() {
+        long[] plan = recording && recordingExposure != null ? recordingExposure : plannedExposure(videoMode);
+        String isoV = plan != null ? String.valueOf(plan[1]) : liveIso > 0 ? String.valueOf(liveIso) : "—";
+        String spdV = plan != null ? Fmt.shutter(plan[0]) : liveExp > 0 ? Fmt.shutter(liveExp) : "—";
+        String isoL = plan != null ? "ISO" : "ISO · A";
+        String spdL = plan != null ? (recording ? "SPEED 🔒" : "SPEED") : "SPEED · A";
+        boolean evSet = Math.abs(ev) > 0.05f;
+        if (videoMode) {
+            String res = videoSize == null ? "—" : videoSize.getWidth() >= 3840 ? "4K" : videoSize.getHeight() + "p";
+            setCell(0, "RES", res, true);
+            setCell(1, "FPS", String.valueOf(fps), true);
+            setCell(2, isoL, isoV, plan != null);
+            setCell(3, spdL, spdV, plan != null);
+            setCell(4, "EV", Fmt.ev(ev).replace("EV ", ""), evSet);
+        } else {
+            setCell(0, isoL, isoV, plan != null);
+            setCell(1, spdL, spdV, plan != null);
+            setCell(2, "EV", Fmt.ev(ev).replace("EV ", ""), evSet);
+            boolean wbSet = preset.awb != CameraMetadata.CONTROL_AWB_MODE_AUTO;
+            setCell(3, "WB", wbSet ? Fmt.awb(preset.awb).replaceAll("^\\S+ ", "") : "Auto", wbSet);
+            String af = focusPoint != null ? "Tap" : (preset.focus == Preset.FOCUS_INFINITY && canFocusManually && !useFront) ? "∞" : "Auto";
+            setCell(4, "FOCUS", af, !af.equals("Auto"));
         }
     }
 
@@ -241,6 +488,7 @@ public class CameraActivity extends Activity {
         if (recording) stopRecording();
         ui.removeCallbacksAndMessages(null);
         countdown.setVisibility(View.GONE);
+        tipBanner.setVisibility(View.GONE);
         capturing = false;
         orientationListener.disable();
         closeCamera();
@@ -292,6 +540,7 @@ public class CameraActivity extends Activity {
             readCapabilities();
             chooseSizes();
             buildZoomButtons();
+            syncEvSeek();
             updateModeLabels();
 
             // Portrait screen: preview buffers are landscape, so swap for the view's aspect.
@@ -589,7 +838,7 @@ public class CameraActivity extends Activity {
             long now = SystemClock.uptimeMillis();
             if (now - lastReadoutMs > 350) {
                 lastReadoutMs = now;
-                runOnUiThread(CameraActivity.this::updateReadout);
+                runOnUiThread(CameraActivity.this::updateProStrip);
             }
         }
     };
@@ -658,7 +907,7 @@ public class CameraActivity extends Activity {
         }
         if (capturing) return;
         capturing = true;
-        if (preset.timerSec > 0) runCountdown(preset.timerSec);
+        if (timerSec > 0) runCountdown(timerSec);
         else takePhoto();
     }
 
@@ -685,7 +934,8 @@ public class CameraActivity extends Activity {
 
             flashScreen();
             if (exp != null && exp[0] > 300_000_000L) {
-                tip.setText("⏳ Long exposure " + Fmt.shutter(exp[0]) + " — keep the phone completely still…");
+                final String msg = "⏳ Long exposure " + Fmt.shutter(exp[0]) + " — keep the phone completely still…";
+                runOnUiThread(() -> showTip(msg));
             }
             session.capture(b.build(), new CameraCaptureSession.CaptureCallback() {
                 @Override public void onCaptureFailed(CameraCaptureSession s, CaptureRequest r, android.hardware.camera2.CaptureFailure f) {
@@ -731,14 +981,13 @@ public class CameraActivity extends Activity {
         } finally {
             if (img != null) img.close();
             capturing = false;
-            runOnUiThread(() -> tip.setText("💡 " + preset.tips));
         }
     }
 
     private void flashScreen() {
         runOnUiThread(() -> {
-            texture.setAlpha(0.2f);
-            texture.animate().alpha(1f).setDuration(250).start();
+            flash.setAlpha(0.85f);
+            flash.animate().alpha(0f).setDuration(220).start();
         });
     }
 
@@ -848,19 +1097,21 @@ public class CameraActivity extends Activity {
 
     private void setRecordingUi(boolean on) {
         runOnUiThread(() -> {
-            shutter.setBackgroundResource(on ? R.drawable.shutter_stop : R.drawable.shutter_rec);
+            shutter.setBackgroundResource(on ? R.drawable.shutter_stop : R.drawable.shutter_video);
             recTime.setVisibility(on ? View.VISIBLE : View.GONE);
-            float a = on ? 0.3f : 1f;
-            modePhoto.setAlpha(a);
-            quality.setAlpha(a);
+            float a = on ? 0.25f : 1f;
+            modeSeg.setAlpha(a);
+            carouselScroll.setAlpha(a);
             flip.setAlpha(a);
+            thumb.setAlpha(a);
+            updateProStrip();
         });
     }
 
     private void tickRecTime() {
         if (!recording) return;
         long s = (SystemClock.uptimeMillis() - recStartMs) / 1000;
-        recTime.setText(String.format(Locale.US, "● %02d:%02d", s / 60, s % 60));
+        recTime.setText(String.format(Locale.US, "%s %02d:%02d", (s % 2 == 0) ? "🔴" : "⚫", s / 60, s % 60));
         ui.postDelayed(this::tickRecTime, 500);
     }
 
@@ -907,34 +1158,18 @@ public class CameraActivity extends Activity {
     }
 
     private void updateModeLabels() {
-        modePhoto.setTextColor(videoMode ? 0xFFFFFFFF : 0xFFFFB547);
-        modeVideo.setTextColor(videoMode ? 0xFFFFB547 : 0xFFFFFFFF);
-        quality.setVisibility(videoMode ? View.VISIBLE : View.GONE);
-        if (videoMode && videoSize != null) {
-            String q = videoSize.getWidth() >= 3840 ? "4K" : videoSize.getHeight() + "p";
-            quality.setText(q + " · " + fps + " fps  ⇄");
-        }
-        if (!recording) shutter.setBackgroundResource(videoMode ? R.drawable.shutter_rec : R.drawable.shutter_bg);
-    }
-
-    private void changeEv(int dir) {
-        float stepStops = Math.max(evStep, 1f / 3f);
-        float n = ev + dir * stepStops;
-        float lo = evRange.getLower() * evStep, hi = evRange.getUpper() * evStep;
-        if (hi > lo) n = Math.max(lo, Math.min(hi, n));
-        ev = Math.round(n * 10f) / 10f;
-        updateEvText();
-        updateRepeating();
+        modePhoto.setBackground(videoMode ? null : getDrawable(R.drawable.segment_on));
+        modeVideo.setBackground(videoMode ? getDrawable(R.drawable.segment_on) : null);
+        modePhoto.setTextColor(videoMode ? 0xFFFFFFFF : 0xFF111111);
+        modeVideo.setTextColor(videoMode ? 0xFF111111 : 0xFFFFFFFF);
+        if (!recording) shutter.setBackgroundResource(videoMode ? R.drawable.shutter_video : R.drawable.shutter_photo);
+        updateProStrip();
     }
 
     private int evIndex() {
         if (evStep <= 0) return 0;
         int idx = Math.round(ev / evStep);
         return Math.max(evRange.getLower(), Math.min(evRange.getUpper(), idx));
-    }
-
-    private void updateEvText() {
-        evText.setText(Fmt.ev(ev));
     }
 
     private float clampZoom(float z) {
@@ -949,22 +1184,25 @@ public class CameraActivity extends Activity {
             if (lo < 0.95f) stops.add(lo);
             stops.add(1f);
             for (float z : new float[]{2f, 3f, 5f, 10f}) if (z <= hi + 0.01f) stops.add(z);
-            if (stops.size() < 2) { zoomRow.setVisibility(View.GONE); return; }
+            if (stops.size() < 2) { zoomRow.setVisibility(View.INVISIBLE); return; }
             zoomRow.setVisibility(View.VISIBLE);
             for (Float z : stops) {
                 TextView b = new TextView(this);
-                b.setText(Fmt.zoom(z));
-                b.setTextSize(13);
-                b.setPadding(dp(9), 0, dp(9), 0);
-                b.setGravity(android.view.Gravity.CENTER);
+                b.setTextSize(11.5f);
+                b.setTypeface(Typeface.DEFAULT_BOLD);
+                b.setGravity(Gravity.CENTER);
                 b.setTag(z);
                 b.setOnClickListener(v -> {
                     zoom = clampZoom((Float) v.getTag());
                     focusPoint = null;
                     refreshZoomColors();
                     updateRepeating();
+                    updateProStrip();
                 });
-                zoomRow.addView(b, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(34), dp(34));
+                lp.leftMargin = dp(2);
+                lp.rightMargin = dp(2);
+                zoomRow.addView(b, lp);
             }
             refreshZoomColors();
         });
@@ -973,9 +1211,12 @@ public class CameraActivity extends Activity {
     private void refreshZoomColors() {
         for (int i = 0; i < zoomRow.getChildCount(); i++) {
             TextView t = (TextView) zoomRow.getChildAt(i);
-            boolean on = Math.abs((Float) t.getTag() - zoom) < 0.05f;
-            t.setTextColor(on ? 0xFFFFB547 : 0xFFFFFFFF);
-            t.setTypeface(null, on ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            float z = (Float) t.getTag();
+            boolean on = Math.abs(z - zoom) < 0.05f;
+            String label = Fmt.zoom(z).replace("x", "");
+            t.setText(on ? label + "×" : label);
+            t.setTextColor(on ? ACCENT : 0xFFFFFFFF);
+            t.setBackgroundResource(on ? R.drawable.zoom_on : R.drawable.zoom_off);
         }
     }
 
@@ -983,6 +1224,7 @@ public class CameraActivity extends Activity {
         if (session == null || device == null || w == 0 || h == 0) return;
         focusPoint = new float[]{x / w, y / h};
         grid.showFocus(x, y);
+        updateProStrip();
         try {
             updateRepeating();
             CaptureRequest.Builder b = device.createCaptureRequest(
@@ -1028,22 +1270,6 @@ public class CameraActivity extends Activity {
         return new MeteringRectangle[]{new MeteringRectangle(l, t, r - l, btm - t, MeteringRectangle.METERING_WEIGHT_MAX - 1)};
     }
 
-    private void updateReadout() {
-        StringBuilder sb = new StringBuilder();
-        if (videoMode && recording && recordingExposure != null) {
-            sb.append("🔒 ").append(Fmt.iso((int) recordingExposure[1])).append(" · ").append(Fmt.shutter(recordingExposure[0]));
-        } else if (liveIso > 0) {
-            sb.append("Live: ").append(Fmt.iso(liveIso)).append(" · ").append(Fmt.shutter(liveExp));
-            long[] plan = plannedExposure(videoMode);
-            if (plan != null) {
-                sb.append("   →  ").append(videoMode ? "Video" : "Photo").append(": ")
-                  .append(Fmt.iso((int) plan[1])).append(" · ").append(Fmt.shutter(plan[0]));
-            }
-        }
-        if (focusPoint != null) sb.append("  · 🎯 locked");
-        readout.setText(sb.toString());
-    }
-
     private void showInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append("WHY THESE SETTINGS\n").append(preset.why).append("\n\n");
@@ -1058,7 +1284,7 @@ public class CameraActivity extends Activity {
             }
             if (videoMode && !videoNote.isEmpty()) sb.append(videoNote).append("\n\n");
         }
-        sb.append("Tap the preview to focus and meter on that spot. Use − / + to make it darker or brighter.");
+        sb.append("Tap the preview to focus and meter on that spot. Tap EV to make it brighter or darker. Amber values are set by this scene.");
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle(preset.emoji + " " + preset.name)
                 .setMessage(sb.toString())

@@ -56,6 +56,10 @@ public class Preset {
     public boolean frontCamera = false;
     public boolean startInVideo = false;
 
+    // Look
+    public String shortName = "";
+    public int color1 = 0xFF2B3240, color2 = 0xFF151A22;
+
     Preset(String id, String emoji, String name, String subtitle, String why, String tips) {
         this.id = id;
         this.emoji = emoji;
@@ -218,7 +222,39 @@ public class Preset {
         p.photoExp = EXP_AUTO; p.fps = 30; p.frontCamera = true; p.startInVideo = true;
         l.add(p);
 
+        for (Preset x : l) style(x);
         cache = l;
         return l;
+    }
+
+    /** Short label for the camera's scene bar, and the tile colours for the scene gallery. */
+    private static void style(Preset p) {
+        switch (p.id) {
+            case "auto":         look(p, "AUTO",      0xFF3A4A63, 0xFF1B2230); break;
+            case "beach":        look(p, "BEACH",     0xFF0FA3B1, 0xFF0B5C8A); break;
+            case "golden":       look(p, "SUNSET",    0xFFF29E4C, 0xFFB3433C); break;
+            case "night":        look(p, "NIGHT",     0xFF3B2A7A, 0xFF120F2E); break;
+            case "tripod_night": look(p, "TRIPOD",    0xFF22305C, 0xFF0A0F22); break;
+            case "trails":       look(p, "TRAILS",    0xFFD9354C, 0xFF3A0E2E); break;
+            case "landscape":    look(p, "LANDSCAPE", 0xFF4C8C4A, 0xFF1E4A3B); break;
+            case "peaks":        look(p, "PEAKS",     0xFF6C7FA6, 0xFF2E3A5A); break;
+            case "snow":         look(p, "SNOW",      0xFF8FB8D6, 0xFF4A6B8A); break;
+            case "roadtrip":     look(p, "ROAD TRIP", 0xFF5A6B7A, 0xFF22282E); break;
+            case "street":       look(p, "STREET",    0xFFE0A030, 0xFF7A4A12); break;
+            case "portrait":     look(p, "PORTRAIT",  0xFFC46A8E, 0xFF5A2A4A); break;
+            case "cinematic":    look(p, "CINEMATIC", 0xFF2D2D2D, 0xFF8A5A1A); break;
+            case "action":       look(p, "ACTION",    0xFFE8572E, 0xFF8A1E12); break;
+            case "indoor":       look(p, "INDOOR",    0xFFB07A4A, 0xFF4A3020); break;
+            case "food":         look(p, "FOOD",      0xFFD9822B, 0xFF7A3A12); break;
+            case "waterfall":    look(p, "SILKY",     0xFF2E9C8E, 0xFF14504A); break;
+            case "vlog":         look(p, "VLOG",      0xFF7A5AE0, 0xFF3A2A8A); break;
+            default:             look(p, p.name.toUpperCase(), 0xFF2B3240, 0xFF151A22);
+        }
+    }
+
+    private static void look(Preset p, String shortName, int c1, int c2) {
+        p.shortName = shortName;
+        p.color1 = c1;
+        p.color2 = c2;
     }
 }

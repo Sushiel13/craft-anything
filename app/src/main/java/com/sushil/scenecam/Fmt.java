@@ -66,6 +66,22 @@ final class Fmt {
         return sb.toString();
     }
 
+    /** Very short settings line for a scene tile. */
+    static String brief(Preset p) {
+        StringBuilder sb = new StringBuilder();
+        if (p.photo) {
+            if (p.photoExp == Preset.EXP_MANUAL) sb.append("up to ").append(shutter(p.shutterNs));
+            else if (p.photoExp == Preset.EXP_SHUTTER) sb.append(shutter(p.shutterNs));
+            else sb.append("Auto");
+            if (Math.abs(p.ev) > 0.05f) sb.append(" · ").append(ev(p.ev));
+            if (Math.abs(p.zoom - 1f) > 0.01f) sb.append(" · ").append(zoom(p.zoom));
+        } else {
+            sb.append(p.fps).append(" fps");
+            if (p.vidExp == Preset.VID_CINE) sb.append(" · 1/").append(p.fps * 2).append("s");
+        }
+        return sb.toString();
+    }
+
     static String iso(int iso) {
         return "ISO " + iso;
     }

@@ -9,26 +9,43 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:paddingTop="20dp"
-        android:paddingBottom="24dp">
+        android:paddingLeft="14dp"
+        android:paddingRight="14dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="28dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/back"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Back to camera"
+                android:padding="10dp"
+                android:src="@drawable/ic_back" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_weight="1"
+                android:text="Scenes"
+                android:textColor="@color/text"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="@color/accent"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Pick what you're shooting. The camera sets itself up like a pro."
+            android:layout_marginLeft="6dp"
+            android:text="Pick what you're shooting — the camera sets itself up like a pro."
             android:textColor="@color/muted"
-            android:textSize="14sp" />
+            android:textSize="13.5sp" />
 
         <TextView
             android:id="@+id/capability"
@@ -36,24 +53,25 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:background="@drawable/card_bg"
-            android:padding="12dp"
+            android:lineSpacingExtra="2dp"
+            android:padding="14dp"
             android:textColor="@color/text"
-            android:textSize="13sp" />
+            android:textSize="12.5sp" />
 
         <LinearLayout
-            android:id="@+id/list"
+            android:id="@+id/grid"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:orientation="vertical" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="18dp"
             android:gravity="center"
-            android:text="Photos save to Pictures/SceneCam · Videos to Movies/SceneCam"
+            android:text="Photos → Pictures/SceneCam  ·  Videos → Movies/SceneCam"
             android:textColor="@color/muted"
-            android:textSize="12sp" />
+            android:textSize="11.5sp" />
     </LinearLayout>
 </ScrollView>

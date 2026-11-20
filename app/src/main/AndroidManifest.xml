@@ -14,9 +14,10 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".CameraActivity"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:theme="@style/CameraTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -24,9 +25,8 @@
         </activity>
 
         <activity
-            android:name=".CameraActivity"
+            android:name=".MainActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/CameraTheme" />
+            android:screenOrientation="portrait" />
     </application>
 </manifest>
