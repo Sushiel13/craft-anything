@@ -30,7 +30,7 @@ jobs:
       - name: Build APK
         run: |
           set -o pipefail
-          gradle assembleDebug --no-daemon 2>&1 | tee build.log
+          for i in 1 2 3; do gradle assembleDebug --no-daemon 2>&1 | tee build.log && break; [ $i = 3 ] && exit 1; echo "Retrying (Maven download hiccup)…"; sleep 20; done
 
       - name: Report build errors
         if: failure()
