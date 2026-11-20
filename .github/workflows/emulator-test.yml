@@ -53,6 +53,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ls -la test-out || exit 0
+          find test-out -type f -empty -delete
           gh release delete scenecam-test --yes --cleanup-tag || true
           gh release create scenecam-test test-out/* --target "$GITHUB_SHA" --prerelease --latest=false \
             --title "SceneCam emulator test" --notes "Screenshots and logs from ${GITHUB_SHA::7}"
