@@ -10,8 +10,8 @@ android {
         applicationId "com.sushil.scenecam"
         minSdk 29
         targetSdk 36
-        versionCode 6
-        versionName "1.1.4"
+        versionCode 7
+        versionName "2.0"
     }
 
     // Fixed key so every new build installs over the old one.

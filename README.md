@@ -1,22 +1,16 @@
-# SceneCam
+# SceneCam — camera settings guide
 
-Pick what you're shooting — beach, sunset, night city, light trails, mountains, portrait, cinematic video… — and SceneCam sets the camera up like a pro would, then you just press the shutter.
+Pick your phone once, choose **Photo** or **Video**, then a scene (beach, sunset, night city, light trails,
+mountains, portrait, cinematic video, indoor events…). SceneCam shows:
 
-## What each scene controls
-- **Exposure style**: auto + brightness shift (EV), *shutter priority* (fixed shutter, ISO worked out from the scene's light), or full manual (fixed ISO + long shutter for light trails).
-- **White balance**: daylight / warm / auto.
-- **Lens & zoom**: 0.5x ultra-wide for landscapes, 2x for portraits and food, 3x for layered peaks.
-- **Focus**: continuous, or locked at infinity for landscapes and night trails.
-- **Video**: 25 / 30 / 60 fps, 4K or 1080p, stabilisation, and the 180° cinema shutter rule (1/50 s at 25 fps) with exposure locked.
-- **Anti-flicker**: 50 Hz (India's mains frequency) so tube lights and LEDs don't flicker.
-- **Self-timer** for tripod scenes, rule-of-thirds grid, tap to focus + meter.
+- **Settings to use** — mode, lens, ISO, shutter, EV, white balance, focus, resolution, fps, stabilisation.
+- **Do this on your phone** — numbered steps for *your* camera app (Samsung, Pixel, Xiaomi/Redmi/POCO,
+  OnePlus/Oppo/Realme, Vivo/iQOO, other Android, iPhone), adjusted to what it can do (Pro mode or not,
+  zoom lenses, RAW, 25 fps…).
+- **Why these settings** and **Pro tips**.
+- **Open Camera** — jumps to your phone's own camera app in photo or video mode.
 
-Every scene has an ⓘ button explaining *why* those settings are used and how to shoot it.
+Android doesn't allow apps to change the built-in camera app's settings, so SceneCam tells you exactly what to set.
 
-## Notes
-- Android doesn't let any app change the built-in camera app's settings, so SceneCam is its own camera (Camera2 API).
-- Manual shutter/ISO depends on the phone: the home screen shows what yours allows. On phones that block manual control for other apps, SceneCam still applies brightness, colour, focus, zoom, frame-rate and stabilisation per scene.
-- Photos: `Pictures/SceneCam` · Videos: `Movies/SceneCam`.
-
-## Build
-GitHub Actions builds the APK on every push to `main` and attaches it to the **latest** release. Android 10+.
+GitHub Actions builds the APK on every push to `scenecam` and attaches it to the `scenecam-latest` release;
+a second workflow walks through the app on an Android emulator and saves screenshots to `scenecam-test`.
