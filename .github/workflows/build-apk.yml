@@ -26,6 +26,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.13"
+          # A restored cache once held broken "not found" answers for Maven artifacts; start clean each time.
+          cache-disabled: true
 
       - name: Build APK
         run: |
