@@ -28,7 +28,7 @@ jobs:
           gradle-version: "8.13"
 
       - name: Build APK
-        run: for i in 1 2 3; do gradle assembleDebug --no-daemon -q && break; [ $i = 3 ] && exit 1; sleep 20; done
+        run: R=""; for i in 1 2 3; do gradle assembleDebug --no-daemon -q $R && break; R=--refresh-dependencies; [ $i = 3 ] && exit 1; sleep 20; done
 
       - name: Enable KVM
         run: |
