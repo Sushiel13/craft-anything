@@ -267,11 +267,33 @@ public class CameraActivity extends Activity {
         buildCarousel();
         setPreset(Preset.byId(id), true);
 
-        if (!hasPerm(Manifest.permission.CAMERA)) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQ_PERMS);
-        } else if (!hasPerm(Manifest.permission.RECORD_AUDIO)) {
-            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_PERMS);
-        }
+        tipBanner.setOnClickListener(v -> {
+            if (!permDenied) return;
+            if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                askPermissions();
+            } else {
+                // "Don't ask again" was chosen: only the app's settings page can grant it now.
+                Intent i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", getPackageName(), null));
+                startActivity(i);
+            }
+        });
+    }
+
+    private boolean askingPerms, permDenied;
+
+    private void askPermissions() {
+        if (askingPerms) return;
+        askingPerms = true;
+        requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQ_PERMS);
+    }
+
+    private void showPermissionNeeded() {
+        ui.removeCallbacks(hideTip);
+        tipBanner.animate().cancel();
+        tipBanner.setAlpha(1f);
+        tipBanner.setText("📷  SceneCam needs camera access to work.\nTap here to allow it.");
+        tipBanner.setVisibility(View.VISIBLE);
     }
 
     // =====================================================================
@@ -483,6 +505,12 @@ public class CameraActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (!hasPerm(Manifest.permission.CAMERA)) {
+            if (permDenied) showPermissionNeeded(); else askPermissions();
+        } else if (permDenied) {
+            permDenied = false;           // granted from Settings
+            tipBanner.setVisibility(View.GONE);
+        }
         startBg();
         if (orientationListener.canDetectOrientation()) orientationListener.enable();
         if (texture.isAvailable()) {
@@ -513,12 +541,16 @@ public class CameraActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
         super.onRequestPermissionsResult(code, perms, results);
-        if (!hasPerm(Manifest.permission.CAMERA)) {
-            Toast.makeText(this, "SceneCam needs camera permission to work.", Toast.LENGTH_LONG).show();
-            finish();
-            return;
+        askingPerms = false;
+        if (results == null || results.length == 0) return;   // request was interrupted; ask again on resume
+        if (hasPerm(Manifest.permission.CAMERA)) {
+            permDenied = false;
+            tipBanner.setVisibility(View.GONE);
+            if (texture.isAvailable() && device == null) openCamera();
+        } else {
+            permDenied = true;
+            showPermissionNeeded();
         }
-        if (texture.isAvailable() && device == null) openCamera();
     }
 
     private boolean hasPerm(String p) {

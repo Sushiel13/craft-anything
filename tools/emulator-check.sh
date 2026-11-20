@@ -20,12 +20,24 @@ adb shell am start -W -n $PKG/.CameraActivity
 sleep 6
 shot 1-first-launch
 
-# 2) Grant permissions and relaunch
-adb shell pm grant $PKG android.permission.CAMERA
-adb shell pm grant $PKG android.permission.RECORD_AUDIO
-adb shell am force-stop $PKG
-adb shell am start -W -n $PKG/.CameraActivity
-sleep 8
+# 2) Answer the permission dialogs like a person would ("While using the app"), then check the camera is up
+tap_text() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || return 1
+  local b
+  b=$(adb shell cat /sdcard/ui.xml | tr '>' '\n' | grep -m1 "text=\"$1\"" | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | grep -oE '[0-9]+')
+  [ -z "$b" ] && return 1
+  set -- $b
+  adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 ))
+}
+for n in 1 2; do
+  tap_text "While using the app" || tap_text "Allow" || true
+  sleep 3
+done
+shot 2a-after-allow
+# Fallback so the rest of the test can run even if the dialog wasn't found
+adb shell pm grant $PKG android.permission.CAMERA || true
+adb shell pm grant $PKG android.permission.RECORD_AUDIO || true
+sleep 5
 shot 2-camera-photo
 
 # 3) Take a photo (tap the shutter: centre-bottom of screen)

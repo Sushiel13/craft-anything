@@ -16,6 +16,7 @@
         <activity
             android:name=".CameraActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
             android:screenOrientation="portrait"
             android:theme="@style/CameraTheme">
             <intent-filter>
