@@ -1,8 +1,8 @@
-name: Build APK
+name: Build SceneCam APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, scenecam]
   workflow_dispatch:
 
 permissions:
@@ -51,11 +51,10 @@ jobs:
           path: SceneCam.apk
 
       - name: Publish to the "latest" release
-        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest SceneCam.apk \
+          gh release delete scenecam-latest --yes --cleanup-tag || true
+          gh release create scenecam-latest SceneCam.apk --target "$GITHUB_SHA" --latest=false \
             --title "SceneCam (latest build)" \
             --notes "Built from ${GITHUB_SHA::7}. Download SceneCam.apk on your Android phone and install it (allow 'install unknown apps' if asked)."
