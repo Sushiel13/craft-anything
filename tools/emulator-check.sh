@@ -30,7 +30,7 @@ adb shell input swipe $((W/2)) $((H/4)) $((W/2)) $((H*3/4)) 300; adb shell input
 tap_text "Beach"; sleep 3; shot 4-beach-photo
 scroll_down; shot 5-beach-photo-steps
 scroll_down; shot 6-beach-photo-tips
-tap_text "VIDEO" || true; sleep 2; adb shell input swipe $((W/2)) $((H/4)) $((W/2)) $((H*3/4)) 300; sleep 1; shot 7-beach-video
+tap_text "VIDEO" || tap_text "🎥" || true; sleep 2; adb shell input swipe $((W/2)) $((H/4)) $((W/2)) $((H*3/4)) 300; sleep 1; shot 7-beach-video
 adb shell input keyevent KEYCODE_BACK; sleep 2
 tap_text "VIDEO"; sleep 2
 scroll_down

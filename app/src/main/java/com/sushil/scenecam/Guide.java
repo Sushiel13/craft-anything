@@ -25,6 +25,10 @@ final class Guide {
         return Math.abs(z - Math.round(z)) < 0.05f ? Math.round(z) + "x" : String.format(Locale.US, "%.1fx", z);
     }
 
+    static String cap(String t) {
+        return t.isEmpty() ? t : Character.toUpperCase(t.charAt(0)) + t.substring(1);
+    }
+
     static String wb(int k) {
         return k <= 0 ? "Auto" : k + "K";
     }
@@ -156,8 +160,8 @@ final class Guide {
             if (!s.ev.startsWith("0")) st.add("Set EV (exposure) to " + s.ev + ". If ISO and shutter are both fixed, EV may be greyed out — that's normal.");
             st.add(s.focusInfinity ? "Set focus to manual (MF) and slide it all the way to ∞ / the mountain icon." : "Leave focus on AF and tap the subject.");
         } else {
-            if (!s.ev.startsWith("0")) st.add("Tap the subject, then " + p.evHow + " to about " + s.ev + ".");
-            else st.add("Tap the subject to focus.");
+            st.add("Tap the subject to focus.");
+            if (!s.ev.startsWith("0")) st.add("Brightness: " + cap(p.evHow) + " to about " + s.ev + ".");
             if (s.wbK > 0) st.add("Colour: " + p.wbHow);
             if (s.photoMode == Scene.P_PRO && (s.shutter.contains("1000") || s.shutter.contains("500"))) {
                 st.add("For moving subjects, use " + (p.burstHow.isEmpty() ? "burst" : "burst: " + p.burstHow) + " — the phone picks a faster shutter in bright light.");
@@ -212,7 +216,7 @@ final class Guide {
         }
 
         String ev = s.videoEv();
-        if (!ev.startsWith("0")) st.add("Tap the subject, then " + p.evHow + " to about " + ev + ".");
+        if (!ev.startsWith("0")) st.add("Brightness: " + cap(p.evHow) + " to about " + ev + ".");
         if (s.lockExposure) st.add("Lock exposure and focus: " + p.lockHow);
         if (s.videoMode != Scene.V_ACTION && s.stab.equals("On")) st.add("Make sure video stabilisation is on (it usually is by default).");
         st.add("Hold the phone with both hands, elbows tucked in, and move slowly. Record 5–10 seconds per shot.");
