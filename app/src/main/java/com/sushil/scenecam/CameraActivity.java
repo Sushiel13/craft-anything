@@ -185,18 +185,6 @@ public class CameraActivity extends Activity {
         evSeek = findViewById(R.id.evSeek);
 
         thumb.setClipToOutline(true);
-        // Keep the grid and shutter flash exactly the size of the picture, not the whole screen.
-        texture.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            int w = r - l, h = b - t;
-            for (View o : new View[]{grid, flash}) {
-                android.view.ViewGroup.LayoutParams lp = o.getLayoutParams();
-                if (lp.width != w || lp.height != h) {
-                    lp.width = w;
-                    lp.height = h;
-                    o.setLayoutParams(lp);
-                }
-            }
-        });
         evSeek.setProgressTintList(ColorStateList.valueOf(ACCENT));
         evSeek.setThumbTintList(ColorStateList.valueOf(ACCENT));
 

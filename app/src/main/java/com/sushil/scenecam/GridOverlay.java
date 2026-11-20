@@ -4,10 +4,9 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.view.View;
 
 /** Rule-of-thirds grid plus a tap-to-focus ring. */
-public class GridOverlay extends View {
+public class GridOverlay extends MatchPreviewView {
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private boolean showGrid = true;
