@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.sushil.scenecam'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.sushil.scenecam"
+        minSdk 29
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // Fixed key so every new build installs over the old one.
+    signingConfigs {
+        personal {
+            storeFile file('scenecam.keystore')
+            storePassword 'NvkjYmxHBjjmqy0q_2dCFwuH'
+            keyAlias 'scenecam'
+            keyPassword 'NvkjYmxHBjjmqy0q_2dCFwuH'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.personal
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.personal
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
