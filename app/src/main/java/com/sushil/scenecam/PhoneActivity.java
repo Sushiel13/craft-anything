@@ -30,7 +30,10 @@ public class PhoneActivity extends Activity {
             back.setOnClickListener(v -> finish());
             root.addView(back);
         }
-        root.addView(Ui.text(this, first ? "Welcome to SceneCam 👋" : "Change phone", 26, Ui.TEXT, true));
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.mipmap.ic_launcher);
+        if (first) root.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
+        root.addView(Ui.text(this, first ? "Welcome to SceneCam 👋" : "Change phone", 26, Ui.TEXT, true), Ui.match(this, first ? 12 : 0));
         root.addView(Ui.text(this, "Which phone do you have? Every camera app hides its settings in different places — "
                 + "we'll show the steps for yours.", 14, Ui.MUTED, false), Ui.match(this, 6));
 
@@ -51,7 +54,8 @@ public class PhoneActivity extends Activity {
             card.addView(txt, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             card.addView(Ui.text(this, on ? "✓" : "›", 20, on ? Ui.ACCENT : Ui.MUTED, true));
 
-            android.graphics.drawable.GradientDrawable bg = Ui.rounded(this, Ui.CARD, 16);
+            card.setElevation(Ui.dp(this, 1.5f));
+            android.graphics.drawable.GradientDrawable bg = Ui.rounded(this, Ui.CARD, 18);
             if (on) bg.setStroke(Ui.dp(this, 2), Ui.ACCENT);
             Ui.clickable(card, bg, v -> {
                 Ui.prefs(this).edit().putString("phone", ph.id).apply();

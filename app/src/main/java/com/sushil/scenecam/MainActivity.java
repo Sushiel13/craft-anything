@@ -47,8 +47,15 @@ public class MainActivity extends Activity {
         scroll.addView(root);
 
         // Header
+        LinearLayout brandRow = Ui.hbox(this);
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.mipmap.ic_launcher);
+        brandRow.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         TextView title = Ui.text(this, "SceneCam", 30, Ui.ACCENT, true);
-        root.addView(title);
+        title.setPadding(Ui.dp(this, 10), 0, 0, 0);
+        Ui.gradientText(title);
+        brandRow.addView(title);
+        root.addView(brandRow);
         root.addView(Ui.text(this, "Pro camera settings for every scene — made simple.", 14, Ui.MUTED, false));
 
         // Phone card
@@ -64,7 +71,8 @@ public class MainActivity extends Activity {
         if (ph != null) info.addView(Ui.text(this, capabilityLine(ph), 12, Ui.MUTED, false));
         phoneCard.addView(info, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         phoneCard.addView(Ui.text(this, "Change ›", 13, Ui.ACCENT, true));
-        Ui.clickable(phoneCard, Ui.rounded(this, Ui.CARD, 18),
+        phoneCard.setElevation(Ui.dp(this, 1.5f));
+        Ui.clickable(phoneCard, Ui.rounded(this, Ui.CARD, 20),
                 v -> startActivityForResult(new Intent(this, PhoneActivity.class), REQ_PHONE));
         root.addView(phoneCard, Ui.match(this, 18));
 
@@ -118,7 +126,8 @@ public class MainActivity extends Activity {
         FrameLayout f = new FrameLayout(this);
         int pad = Ui.dp(this, 14);
         f.setPadding(pad, pad, pad, pad);
-        Ui.clickable(f, Ui.gradient(this, s.color1, s.color2, 20), v -> {
+        f.setElevation(Ui.dp(this, 2));
+        Ui.clickable(f, Ui.gradient(this, s.color1, s.color2, 22), v -> {
             Intent i = new Intent(this, SceneActivity.class);
             i.putExtra(SceneActivity.EXTRA_SCENE, s.id);
             i.putExtra(SceneActivity.EXTRA_VIDEO, video);
@@ -130,7 +139,7 @@ public class MainActivity extends Activity {
 
         LinearLayout bottom = Ui.vbox(this);
         bottom.addView(Ui.text(this, s.name, 15, 0xFFFFFFFF, true));
-        TextView quick = Ui.text(this, quickLine(s), 11, 0xDDFFFFFF, false);
+        TextView quick = Ui.text(this, quickLine(s), 11, 0xEEFFFFFF, false);
         quick.setMaxLines(1);
         quick.setEllipsize(android.text.TextUtils.TruncateAt.END);
         bottom.addView(quick);

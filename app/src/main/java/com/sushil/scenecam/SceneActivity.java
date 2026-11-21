@@ -59,7 +59,7 @@ public class SceneActivity extends Activity {
         hero.addView(Ui.text(this, scene.name, 24, 0xFFFFFFFF, true));
         hero.addView(Ui.text(this, scene.shortDesc, 14, 0xE6FFFFFF, false));
         TextView chip = Ui.text(this, "📱 " + phone.fullName() + "   ·   " + (video ? "🎥 Video" : "📷 Photo"), 12, 0xFFFFFFFF, true);
-        chip.setBackground(Ui.rounded(this, 0x55000000, 14));
+        chip.setBackground(Ui.rounded(this, 0x40000000, 14));
         chip.setPadding(Ui.dp(this, 10), Ui.dp(this, 5), Ui.dp(this, 10), Ui.dp(this, 5));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.topMargin = Ui.dp(this, 12);
@@ -89,7 +89,7 @@ public class SceneActivity extends Activity {
             line.addView(val, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f));
             row.addView(line);
             if (!r.note.isEmpty()) {
-                TextView n = Ui.text(this, r.note, 12, 0xFFB8A27A, false);
+                TextView n = Ui.text(this, r.note, 12, Ui.NOTE, false);
                 n.setGravity(Gravity.END);
                 row.addView(n);
             }
@@ -109,9 +109,9 @@ public class SceneActivity extends Activity {
             LinearLayout line = Ui.hbox(this);
             line.setGravity(Gravity.TOP);
             line.setPadding(0, Ui.dp(this, 9), 0, 0);
-            TextView num = Ui.text(this, String.valueOf(i + 1), 13, 0xFF111111, true);
+            TextView num = Ui.text(this, String.valueOf(i + 1), 13, 0xFFFFFFFF, true);
             num.setGravity(Gravity.CENTER);
-            num.setBackground(Ui.rounded(this, Ui.ACCENT, 12));
+            num.setBackground(Ui.brand(this, 12));
             line.addView(num, new LinearLayout.LayoutParams(Ui.dp(this, 24), Ui.dp(this, 24)));
             TextView t = Ui.text(this, list.get(i), 14.5f, Ui.TEXT, false);
             t.setPadding(Ui.dp(this, 12), Ui.dp(this, 1), 0, 0);
@@ -126,15 +126,15 @@ public class SceneActivity extends Activity {
         tips.addView(Ui.text(this, "💡 " + (video ? scene.videoTips : scene.photoTips), 14.5f, Ui.TEXT, false), Ui.match(this, 8));
 
         // Bottom button
-        TextView open = Ui.text(this, phone.iphone ? "These steps are for an iPhone" : (video ? "🎥  Open Camera (video)" : "📷  Open Camera"), 16, 0xFF111111, true);
+        TextView open = Ui.text(this, phone.iphone ? "These steps are for an iPhone" : (video ? "🎥  Open Camera (video)" : "📷  Open Camera"), 16, 0xFFFFFFFF, true);
         open.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 56), Gravity.BOTTOM);
         blp.setMargins(p, 0, p, Ui.dp(this, 18));
         if (phone.iphone) {
-            open.setBackground(Ui.rounded(this, 0xFF3A4150, 28));
-            open.setTextColor(Ui.TEXT);
+            open.setBackground(Ui.rounded(this, Ui.CARD2, 28));
+            open.setTextColor(Ui.MUTED);
         } else {
-            Ui.clickable(open, Ui.rounded(this, Ui.ACCENT, 28), v -> openCamera());
+            Ui.clickable(open, Ui.brand(this, 28), v -> openCamera());
         }
         open.setElevation(Ui.dp(this, 6));
         frame.addView(open, blp);

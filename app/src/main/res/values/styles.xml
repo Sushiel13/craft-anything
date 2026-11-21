@@ -2,19 +2,20 @@
 <resources>
     <string name="app_name">SceneCam</string>
 
-    <color name="bg">#0E1116</color>
-    <color name="card">#1A1F27</color>
-    <color name="accent">#FFB547</color>
-    <color name="text">#F2F4F7</color>
-    <color name="muted">#9AA4B2</color>
-    <color name="icon_bg">#14181F</color>
+    <color name="bg">#F6F6FA</color>
+    <color name="card">#FFFFFF</color>
+    <color name="accent">#D62976</color>
+    <color name="text">#1B1C24</color>
+    <color name="muted">#6E7182</color>
 
-    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:textColor">@color/text</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
 </resources>

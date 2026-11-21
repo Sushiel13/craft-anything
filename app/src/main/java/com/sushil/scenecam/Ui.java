@@ -17,13 +17,16 @@ import android.widget.TextView;
 final class Ui {
     private Ui() {}
 
-    static final int BG = 0xFF0E1116;
-    static final int CARD = 0xFF181D25;
-    static final int CARD2 = 0xFF222834;
-    static final int TEXT = 0xFFF2F4F7;
-    static final int MUTED = 0xFF9AA4B2;
-    static final int ACCENT = 0xFFFFB547;
-    static final int LINE = 0xFF2A313D;
+    // Fresh light theme with a warm sunset gradient (yellow → orange → pink → purple).
+    static final int BG = 0xFFF6F6FA;
+    static final int CARD = 0xFFFFFFFF;
+    static final int CARD2 = 0xFFEEEEF5;
+    static final int TEXT = 0xFF1B1C24;
+    static final int MUTED = 0xFF6E7182;
+    static final int ACCENT = 0xFFD62976;     // magenta-pink for text accents
+    static final int NOTE = 0xFF9B5A86;
+    static final int LINE = 0xFFEDEDF3;
+    static final int[] BRAND = {0xFFFA7E1E, 0xFFD62976, 0xFF962FBF};
 
     static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences("scenecam", Context.MODE_PRIVATE);
@@ -44,6 +47,24 @@ final class Ui {
         return g;
     }
 
+    /** The app's signature gradient. */
+    static GradientDrawable brand(Context c, float radiusDp) {
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, BRAND);
+        g.setCornerRadius(dp(c, radiusDp));
+        return g;
+    }
+
+    /** Paints a TextView's letters with the brand gradient. */
+    static void gradientText(TextView t) {
+        t.post(() -> {
+            float w = t.getPaint().measureText(t.getText().toString());
+            t.getPaint().setShader(new android.graphics.LinearGradient(0, 0, w, 0,
+                    new int[]{0xFFF5A623, 0xFFFA7E1E, 0xFFD62976, 0xFF962FBF}, null,
+                    android.graphics.Shader.TileMode.CLAMP));
+            t.invalidate();
+        });
+    }
+
     static GradientDrawable gradient(Context c, int c1, int c2, float radiusDp) {
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{c1, c2});
         g.setCornerRadius(dp(c, radiusDp));
@@ -52,7 +73,7 @@ final class Ui {
 
     /** Makes a view tappable with a ripple over its background. */
     static void clickable(View v, android.graphics.drawable.Drawable bg, View.OnClickListener l) {
-        v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33FFFFFF), bg, bg));
+        v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22D62976), bg, bg));
         v.setClickable(true);
         v.setFocusable(true);
         v.setOnClickListener(l);
@@ -90,7 +111,8 @@ final class Ui {
     /** A rounded card with a small caps heading. Returns the inner box to add content to. */
     static LinearLayout card(Activity a, LinearLayout parent, String heading) {
         LinearLayout card = vbox(a);
-        card.setBackground(rounded(a, CARD, 18));
+        card.setBackground(rounded(a, CARD, 20));
+        card.setElevation(dp(a, 1.5f));
         int p = dp(a, 16);
         card.setPadding(p, dp(a, 14), p, dp(a, 14));
         if (heading != null) {
@@ -113,10 +135,10 @@ final class Ui {
         boolean[] enabled = {leftEnabled, rightEnabled};
         for (int i = 0; i < 2; i++) {
             boolean on = (i == 1) == rightOn;
-            TextView t = text(a, names[i], 13, on ? 0xFF111111 : (enabled[i] ? TEXT : 0x55FFFFFF), true);
+            TextView t = text(a, names[i], 13, on ? 0xFFFFFFFF : (enabled[i] ? TEXT : 0x55000000), true);
             t.setLetterSpacing(0.08f);
             t.setGravity(Gravity.CENTER);
-            if (on) t.setBackground(rounded(a, ACCENT, 19));
+            if (on) t.setBackground(brand(a, 19));
             final boolean pickRight = i == 1;
             if (enabled[i] && !on) t.setOnClickListener(v -> onPick.accept(pickRight));
             seg.addView(t, new LinearLayout.LayoutParams(0, dp(a, 38), 1f));

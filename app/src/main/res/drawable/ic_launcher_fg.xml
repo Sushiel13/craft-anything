@@ -2,15 +2,16 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- camera body -->
-    <path android:fillColor="#FFB547"
-        android:pathData="M36,42 L44,42 L48,36 L60,36 L64,42 L72,42 Q76,42 76,46 L76,70 Q76,74 72,74 L36,74 Q32,74 32,70 L32,46 Q32,42 36,42 Z" />
-    <!-- lens -->
-    <path android:fillColor="#14181F"
-        android:pathData="M54,46 A12,12 0 1,1 53.99,46 Z" />
-    <path android:fillColor="#FFB547"
-        android:pathData="M54,51 A7,7 0 1,1 53.99,51 Z" />
-    <!-- sparkle (scene) -->
-    <path android:fillColor="#14181F"
-        android:pathData="M69,46 L70.2,48.8 L73,50 L70.2,51.2 L69,54 L67.8,51.2 L65,50 L67.8,48.8 Z" />
+    <!-- Viewfinder corner brackets: "frame the scene" -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M34,44 V38 Q34,34 38,34 H44 M64,34 H70 Q74,34 74,38 V44 M74,64 V70 Q74,74 70,74 H64 M44,74 H38 Q34,74 34,70 V64" />
+    <!-- Lens / aperture -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4.5" android:fillColor="#00000000"
+        android:pathData="M54,44 A10,10 0 1,1 53.99,44 Z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,50.5 A3.5,3.5 0 1,1 53.99,50.5 Z" />
+    <!-- Sparkle: the smart scene part -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M68.5,42.5 L69.8,45.7 L73,47 L69.8,48.3 L68.5,51.5 L67.2,48.3 L64,47 L67.2,45.7 Z" />
 </vector>
